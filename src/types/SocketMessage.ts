@@ -1,4 +1,7 @@
-type MessageActions = "user_join_game" | "check_game_for_user";
+type MessageActions =
+  | "user_join_game"
+  | "check_game_for_user"
+  | "update_game_state";
 
 export type SocketMessage<T> = {
   Action: MessageActions;

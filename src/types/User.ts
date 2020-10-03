@@ -3,8 +3,11 @@ export type User = {
   Nickname?: string; // The user's way of identifying themselves
 };
 
+export type GameStates = "join" | "lobby" | "observer" | "active" | "judge";
+
 export type UserGame = {
   GameCode: string;
   Key: string;
-  GameState: "lobby" | "observer" | "active" | "judge";
+  GameState: GameStates;
+  Hand: string[];
 };

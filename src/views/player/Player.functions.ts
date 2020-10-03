@@ -1,5 +1,15 @@
 import { v4 } from "uuid";
-import { User } from "./../../types";
+import { User, UserGame } from "./../../types";
+
+export const GenerateNewPlayerGameState = (): UserGame => {
+  console.log("Generate New Player");
+  return {
+    GameCode: "",
+    Key: "",
+    GameState: "join",
+    Hand: [],
+  };
+};
 
 export const GetUserInfo = () => {
   // Try and grab any existing user data from Session

@@ -1,7 +1,8 @@
 import { Game, SocketMessage } from "../../types";
 import { v4 } from "uuid";
-import { CraftMessage } from "./../../utilities";
+import { CraftMessage, RandomNumber } from "./../../utilities";
 import { Settings } from "./../../config";
+import { Words } from "./../../words";
 
 export const CreateNewGame = (): Game => {
   // First generate the easy code for users
@@ -19,6 +20,7 @@ export const CreateNewGame = (): Game => {
     Code: gameCode,
     Key: v4(),
     Players: [],
+    Deck: GenerateGameDeck(),
   };
 };
 
@@ -49,6 +51,9 @@ export const HandleNewMessage = (
             gamePlayers?.push({
               Nickname: message?.Payload?.Nick,
               PlayerID: message?.Payload?.PlayerID,
+              Hand: gameSettings.Deck.slice(0, 10),
+              TurnsPlayed: 0,
+              Points: 0,
             });
             updateGameSettings({
               ...gameSettings,
@@ -66,6 +71,7 @@ export const HandleNewMessage = (
                 Success: true,
                 Code: gameSettings.Code,
                 Key: gameSettings.Key,
+                Hand: gameSettings.Deck.splice(0, 10),
               },
             })
           );
@@ -115,4 +121,51 @@ export const CanUserJoinGame = (
   }
   // Game Settings doesn't exist
   return "Error Connecting to Game";
+};
+
+const GenerateGameDeck = () => {
+  const generatedDeck: string[] = [];
+
+  // Loop through words until we fill a deck with random words
+  // This could probably be better
+  while (generatedDeck.length !== 80) {
+    // Generate a random number within the deck size
+    const random = RandomNumber(0, Words.All.length);
+
+    // Grab that random word
+    const word = Words.All[random];
+
+    // Check if the deck has this word already
+    if (!generatedDeck.includes(word)) {
+      // The deck doesn't have this word so add it
+      generatedDeck.push(word);
+    }
+  }
+
+  // When all is said and done, return the deck
+  return generatedDeck;
+};
+
+export const StartRound = (Socket: WebSocket, GameSettings: Game | null) => {
+  if (GameSettings) {
+    // Pick two players
+    const players = GameSettings.Players;
+    // Sort the players by turns played
+    players.sort((a, b) => (a.TurnsPlayed > b.TurnsPlayed ? 1 : -1));
+
+    // Tell the first two players that they're playing
+    // Tell the rest that they're observers
+    players.forEach((player, index) => {
+      Socket.send(
+        CraftMessage({
+          Action: "update_game_state",
+          RefID: player.PlayerID,
+          Sender: "game",
+          Payload: {
+            PlayerGameState: index < 2 ? "active" : "observer",
+          },
+        })
+      );
+    });
+  }
 };

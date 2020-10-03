@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Game } from "../../types";
-import { CreateNewGame, HandleNewMessage } from "./GameScreen.functions";
+import {
+  CreateNewGame,
+  HandleNewMessage,
+  StartRound,
+} from "./GameScreen.functions";
 
 export const GameScreen = () => {
   // Setup Game state
@@ -34,7 +38,18 @@ export const GameScreen = () => {
       <h1>{gameSettings?.Code}</h1>
       <h2>Join over at {window.location.host}/play</h2>
       {(gameSettings?.Players?.length || 0) >= 3 && (
-        <button type="button">Start Game</button>
+        <button
+          type="button"
+          onClick={() => {
+            // Start the game jeeves
+            if (gameSettings) {
+              // Begin a round using the new updated settings
+              StartRound(socket, gameSettings);
+            }
+          }}
+        >
+          Start Game
+        </button>
       )}
       <p>Game Settings:</p>
       <ul>
@@ -53,6 +68,9 @@ export const GameScreen = () => {
             );
           })}
         </ul>
+        {!!gameSettings?.Deck?.length && (
+          <li>{gameSettings?.Deck?.join(", ")}</li>
+        )}
       </ul>
     </div>
   );
