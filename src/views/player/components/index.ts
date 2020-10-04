@@ -1,3 +1,4 @@
 export * from "./join";
 export * from "./lobby";
-export * from "./active";
+export * from "./selectword";
+export * from "./inputmeld";

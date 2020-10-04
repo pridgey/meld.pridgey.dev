@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { Game } from "../../types";
+import { Game, GameState } from "../../types";
 import {
   CreateNewGame,
   HandleNewMessage,
   StartRound,
 } from "./GameScreen.functions";
+import { Lobby } from "./components";
+import useWebSocket from "react-use-websocket";
 
 export const GameScreen = () => {
   // Setup Game state
@@ -12,66 +14,56 @@ export const GameScreen = () => {
     CreateNewGame()
   );
   // Setup Websocket
-  const [socket, updateSocket] = useState<WebSocket>(
-    new WebSocket(process.env.REACT_APP_WEBSOCKET || "")
-  );
+  const { sendMessage } = useWebSocket(process.env.REACT_APP_WEBSOCKET || "", {
+    onMessage: (event: MessageEvent<any>) => {
+      HandleNewMessage(
+        JSON.parse(event.data),
+        gameSettings,
+        updateGameSettings,
+        sendMessage
+      );
+    },
+  });
 
-  // Setup socket to listen to messages
-  socket.onopen = () => {
-    // Reconnect on close
-    socket.onclose = () => {
-      updateSocket(new WebSocket(process.env.REACT_APP_WEBSOCKET || ""));
-    };
+  // Switch function to return component base on game state
+  const gameStateSwitch = (gameState?: GameState) => {
+    if (gameSettings) {
+      switch (gameState) {
+        case "lobby":
+        default:
+          return (
+            <Lobby
+              GameCode={gameSettings.Code}
+              Players={gameSettings.Players.map((player) => player.Nickname)}
+              OnGameStart={() => {
+                // Start the game jeeves
+                if (gameSettings) {
+                  // Begin a round using the new updated settings
+                  const updatedGameSettings: Game = StartRound(
+                    sendMessage,
+                    gameSettings
+                  );
 
-    socket.onmessage = (event: MessageEvent<any>) => {
-      // Receiving a message
-      const socketData = JSON.parse(event?.data);
-
-      HandleNewMessage(socketData, gameSettings, updateGameSettings, socket);
-    };
+                  // Set game state to non-lobby
+                  updateGameSettings({
+                    ...updatedGameSettings,
+                    GameState: "ongoing",
+                  });
+                }
+              }}
+            />
+          );
+        case "ongoing":
+          return (
+            <div>
+              <h1>ongoing</h1>
+              <h2>{gameSettings.RoundInfo[0]?.Words[0] || ""}</h2>
+              <h2>{gameSettings.RoundInfo[1]?.Words[0] || ""}</h2>
+            </div>
+          );
+      }
+    }
   };
 
-  return (
-    <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
-    >
-      <h1>{gameSettings?.Code}</h1>
-      <h2>Join over at {window.location.host}/play</h2>
-      {(gameSettings?.Players?.length || 0) >= 3 && (
-        <button
-          type="button"
-          onClick={() => {
-            // Start the game jeeves
-            if (gameSettings) {
-              // Begin a round using the new updated settings
-              StartRound(socket, gameSettings);
-            }
-          }}
-        >
-          Start Game
-        </button>
-      )}
-      <p>Game Settings:</p>
-      <ul>
-        <li>Code: {gameSettings?.Code}</li>
-        <li>Key: {gameSettings?.Key}</li>
-        <li>Players:</li>
-        <ul>
-          {gameSettings?.Players?.map((player, index) => {
-            return (
-              <>
-                <li key={`n-${index}`}>{player.Nickname}</li>
-                <ul key={`u-${index}`}>
-                  <li key={`i-${index}`}>{player.PlayerID}</li>
-                </ul>
-              </>
-            );
-          })}
-        </ul>
-        {!!gameSettings?.Deck?.length && (
-          <li>{gameSettings?.Deck?.join(", ")}</li>
-        )}
-      </ul>
-    </div>
-  );
+  return <>{gameStateSwitch(gameSettings?.GameState)}</>;
 };
